@@ -4,6 +4,7 @@ const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
+
 // Initialize Supabase client
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -85,6 +86,36 @@ app.post('/verify', async (req, res) => {
     }
 });
 
+// Get the 20 newest messages
+app.get('/messages', async (req, res) => {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+  res.json(data);
+});
+
+// Save a new message
+app.post('/messages', async (req, res) => {
+  const { name, text } = req.body;
+
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: 'Message cannot be empty' });
+  }
+
+  const { error } = await supabase.from('messages').insert({ name, text: text.trim() });
+
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.json({ success: true });
+});
+
 // Fallback route to serve React frontend for any unmatched routes
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/build/index.html'));
@@ -95,3 +126,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
